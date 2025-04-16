@@ -1,6 +1,6 @@
-# 2025年4月16日 21:45:00
+# 2025年4月16日 22:41:00
 # 验证多层感知机 (MLP) 中间层输出的有效性，逼近sin(x)函数
-
+# 修改：仅使用最终层 loss 进行梯度更新，但记录所有层 loss
 
 import torch
 import torch.nn as nn
@@ -15,7 +15,7 @@ import datetime # 导入 datetime 模块
 # 获取当前时间并格式化为字符串
 now = datetime.datetime.now()
 # 注意：根据当前时间，年份应为 2025
-timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S") # 例如 2025-04-16_13-58-00
+timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S") # 例如 2025-04-16_14-10-00
 
 # 定义结果文件夹路径
 results_base_dir = "results"
@@ -49,7 +49,7 @@ y_train_np = np.sin(x_train_np)
 x_train = torch.tensor(x_train_np, dtype=torch.float32).unsqueeze(1)
 y_train = torch.tensor(y_train_np, dtype=torch.float32).unsqueeze(1)
 
-# 3. 定义 MLP 模型
+# 3. 定义 MLP 模型 (与之前相同)
 class MLPWithIntermediateOutput(nn.Module):
     def __init__(self, input_dim, hidden_dim, output_dim, num_hidden_layers):
         super(MLPWithIntermediateOutput, self).__init__()
@@ -91,21 +91,16 @@ class MLPWithIntermediateOutput(nn.Module):
         # 返回所有中间预测和最终预测
         # 确保返回顺序是从第一个隐藏层到最后一个（最终）输出
         all_outputs = intermediate_outputs + [final_output]
-
-        # 为了方便理解，也可以只返回用于计算loss的投影输出
-        # return intermediate_outputs + [final_output]
-        # 如果需要访问原始隐藏层激活值，可以像这样返回：
-        return all_outputs #, hidden_outputs_before_projection
+        return all_outputs
 
 
-# 4. 实例化模型、损失函数和优化器
+# 4. 实例化模型、损失函数和优化器 (与之前相同)
 model = MLPWithIntermediateOutput(input_dim, hidden_dim, output_dim, num_hidden_layers)
 criterion = nn.MSELoss()
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-# 5. 训练循环
+# 5. 训练循环 (****** 修改部分 ******)
 # 存储每个输出层的 loss 历史记录
-# 总共有 num_hidden_layers + 1 个输出需要计算 loss
 losses_history = [[] for _ in range(num_hidden_layers + 1)]
 
 for epoch in range(num_epochs):
@@ -114,81 +109,81 @@ for epoch in range(num_epochs):
     # 前向传播，获取所有输出
     all_predictions = model(x_train) # 包含 num_hidden_layers+1 个预测
 
-    # 计算每个输出的 loss 并累加总 loss
-    total_loss = 0
+    # 计算每个输出的 loss 用于记录
     current_epoch_losses = [] # 临时存储当前 epoch 的各个 loss 值
+    final_loss_tensor = None # 用于存储最终层的 Tensor loss
 
     for i in range(num_hidden_layers + 1):
+        # 计算当前层的预测与目标之间的 loss
         loss = criterion(all_predictions[i], y_train)
-        current_epoch_losses.append(loss.item()) # 记录标量 loss 值
-        total_loss += loss # 累加 tensor loss 用于反向传播
+        # 记录标量 loss 值
+        current_epoch_losses.append(loss.item())
+        # 如果是最后一层 (final output), 保存其 Tensor loss 用于反向传播
+        if i == num_hidden_layers:
+            final_loss_tensor = loss
 
-    # 反向传播和优化
+    # --- 修改点：只使用最终层的 loss 进行反向传播 ---
     optimizer.zero_grad()       # 清空梯度
-    total_loss.backward()       # 反向传播计算梯度
-    optimizer.step()            # 更新模型参数
+    if final_loss_tensor is not None: # 确保 final_loss_tensor 已被赋值
+        final_loss_tensor.backward() # **只对最终层的 loss 调用 backward()**
+    else:
+        # 理论上不应发生，加个错误处理
+        raise ValueError("Final loss tensor was not calculated.")
+    optimizer.step()            # 更新模型参数 (会更新所有参与计算图的参数)
+    # ------------------------------------------
 
-    # 记录当前 epoch 的所有 loss 值
+    # 记录当前 epoch 的所有 loss 值 (这部分不变)
     for i in range(num_hidden_layers + 1):
         losses_history[i].append(current_epoch_losses[i])
 
-    # 打印训练信息
+    # 打印训练信息 (使用最终层的 loss 作为代表打印，或仍打印所有 loss)
     if (epoch + 1) % 500 == 0:
         loss_str = " | ".join([f"L{i+1}: {l:.6f}" for i, l in enumerate(current_epoch_losses)])
-        print(f'Epoch [{epoch+1}/{num_epochs}], Total Loss: {total_loss.item():.6f} | Individual Losses: [{loss_str}]')
+        # 打印最终层的loss 或 所有loss，这里选择打印所有loss以便观察
+        print(f'Epoch [{epoch+1}/{num_epochs}], Final Layer Loss (for backprop): {final_loss_tensor.item():.6f} | All Recorded Losses: [{loss_str}]')
 
 
-# 6. 绘图并保存 Loss 历史
+# 6. 绘图并保存 Loss 历史 (与之前相同)
 plt.figure(figsize=(12, 6))
 for i in range(num_hidden_layers + 1):
-    label = f'Hidden Layer {i+1} Output Loss' if i < num_hidden_layers else 'Final Output Loss'
+    label = f'Hidden Layer {i+1} Output Loss (Recorded)' if i < num_hidden_layers else 'Final Output Loss (Used for Backprop)'
     plt.plot(losses_history[i], label=label)
 
-plt.title('Training Loss History for Intermediate and Final Outputs')
+plt.title('Training Loss History (Only Final Loss for Backprop)') # 更新标题
 plt.xlabel('Epoch')
 plt.ylabel('Mean Squared Error Loss')
 plt.legend()
 plt.grid(True)
-plt.yscale('log') # 使用对数刻度可能更容易观察 loss 下降
+plt.yscale('log')
 
-# --- 保存 Loss 历史图 ---
-loss_plot_path = os.path.join(results_dir, 'loss_history.png')
+loss_plot_path = os.path.join(results_dir, 'loss_history_final_backprop.png') # 修改文件名
 plt.savefig(loss_plot_path)
 print(f"Loss history plot saved to: {loss_plot_path}")
-# -------------------------
 
-# 7. 可视化逼近效果并保存
+# 7. 可视化逼近效果并保存 (与之前相同)
 model.eval() # 设置为评估模式
-with torch.no_grad(): # 关闭梯度计算
-    # 为了更平滑的曲线，可以生成更多的测试点
+with torch.no_grad():
     x_test_np = np.linspace(-2.5 * math.pi, 2.5 * math.pi, 1000)
     y_test_np = np.sin(x_test_np)
     x_test = torch.tensor(x_test_np, dtype=torch.float32).unsqueeze(1)
-    # 获取所有层的预测输出
-    all_preds_test = model(x_test) # all_preds_test 是一个列表，包含 num_hidden_layers + 1 个 tensor
-    final_pred_test = all_preds_test[-1] # 最后一个是最终预测
+    all_preds_test = model(x_test)
+    final_pred_test = all_preds_test[-1]
 
-plt.figure(figsize=(12, 7)) # 稍微调大图形尺寸以容纳更多图例
+plt.figure(figsize=(12, 7))
 plt.plot(x_test_np, y_test_np, label='True sin(x)', linestyle='--', linewidth=2, color='black')
 
-# --- 绘制中间层的逼近效果 ---
-# all_preds_test 包含 num_hidden_layers+1 个输出，索引 0 到 num_hidden_layers-1 是中间层输出
 for i in range(num_hidden_layers):
-    plt.plot(x_test_np, all_preds_test[i].numpy(), label=f'Hidden Layer {i+1} Approx.', alpha=0.6, linestyle=':')
+    plt.plot(x_test_np, all_preds_test[i].numpy(), label=f'Hidden Layer {i+1} Approx. (Not used in backprop)', alpha=0.6, linestyle=':')
 
-# --- 绘制最终层的逼近效果 ---
-plt.plot(x_test_np, final_pred_test.numpy(), label='MLP Final Approximation', color='red', linewidth=1.5)
+plt.plot(x_test_np, final_pred_test.numpy(), label='MLP Final Approximation (Used in backprop)', color='red', linewidth=1.5)
 
-
-plt.title('Function Approximation: sin(x) by All Layers') # 更新标题
+plt.title('Function Approximation: sin(x) (Only Final Loss for Backprop)') # 更新标题
 plt.xlabel('x')
 plt.ylabel('y')
-plt.legend(loc='upper right') # 调整图例位置避免遮挡
+plt.legend(loc='upper right')
 plt.grid(True)
-plt.ylim(-1.5, 1.5) # 设置 y 轴范围更聚焦
+plt.ylim(-1.5, 1.5)
 
-# --- 保存包含所有层逼近效果的函数逼近图 ---
-approx_plot_path = os.path.join(results_dir, 'function_approximation_all_layers.png') # 修改文件名
+approx_plot_path = os.path.join(results_dir, 'function_approximation_final_backprop.png') # 修改文件名
 plt.savefig(approx_plot_path)
-print(f"Function approximation plot (all layers) saved to: {approx_plot_path}")
-# ------------------------------------------
+print(f"Function approximation plot saved to: {approx_plot_path}")

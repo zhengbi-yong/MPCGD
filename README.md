@@ -29,3 +29,7 @@ git clone https://github.com/zhengbi-yong/MPCGD.git
 python 202504162145.py
 ```
 * 观察results中生成的结果
+
+# 文件与实验的对应表
+202504162145.py —— 用MLP逼近sin(x)，每层loss都参与梯度更新，相当于多目标优化。
+202504162241.py —— 用MLP逼近sin(x)，只有最后的loss参与梯度更新。
