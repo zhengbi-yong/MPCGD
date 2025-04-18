@@ -19,7 +19,8 @@ timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S") # 例如 2025-04-16_13-58-00
 
 # 定义结果文件夹路径
 results_base_dir = "results"
-results_dir = os.path.join(results_base_dir, timestamp_str)
+results_dir = "mlp_sinx_combined_loss"
+results_dir = os.path.join(results_base_dir, results_dir, timestamp_str)
 
 # 创建文件夹 (如果不存在)
 os.makedirs(results_dir, exist_ok=True)

@@ -17,6 +17,8 @@ https://pytorch.org
 * 安装matplotlib
 ```
 pip install matplotlib
+pip install torchmetrics
+pip install datasets
 ```
 
 * 在合适的目录下克隆本仓库
@@ -38,3 +40,14 @@ python 202504162145.py
 202504162256.py —— 用MLP做MNIST分类任务，只有最后的loss参与梯度更新。（Abandoned）
 
 202504162256.py —— 用MLP做MNIST分类任务，只有最后的loss参与梯度更新，画出一个实例。
+
+202504170859.py —— 用MLP做MNIST分类任务，所有loss都参与梯度更新，画出一个实例。
+
+202504170915.py —— 用MLP做MNIST图像超分辨任务，只有最后的loss参与梯度更新，画出一个实例。
+
+202504171354.py —— 用MLP做MNIST图像超分辨任务，所有loss参与梯度更新，画出一个实例。
+
+202504171643.py —— 用MLP做MNIST图像超分辨任务，所有loss参与梯度更新，画出一个实例，增加PSNR，SSIM评价指标。
+
+202504171726.py —— 用MLP做Div2k图像超分辨任务，所有loss参与梯度更新，画出一个实例，增加PSNR，SSIM评价指标。
+在该网址最下方下载High Resolution Images数据集 https://data.vision.ee.ethz.ch/cvl/DIV2K/，放到data/DIV2K文件夹下然后解压，删除压缩包，运行202504171726_preprocess.py程序来预处理数据集。

@@ -19,8 +19,9 @@ print(f"Using device: {device}")
 # --- 创建结果文件夹 ---
 now = datetime.datetime.now()
 timestamp_str = now.strftime("%Y-%m-%d_%H-%M-%S")
-results_base_dir = "results_mnist_shared_head" # 修改文件夹基础名
-results_dir = os.path.join(results_base_dir, timestamp_str)
+results_base_dir = "results"
+results_dir = "mnist_shared_head_final_loss"
+results_dir = os.path.join(results_base_dir, results_dir, timestamp_str)
 os.makedirs(results_dir, exist_ok=True)
 print(f"结果将保存在: {results_dir}")
 # ---------------------
