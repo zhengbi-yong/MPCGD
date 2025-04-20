@@ -51,3 +51,7 @@ python 202504162145.py
 
 202504171726.py —— 用MLP做Div2k图像超分辨任务，所有loss参与梯度更新，画出一个实例，增加PSNR，SSIM评价指标。
 在该网址最下方下载High Resolution Images数据集 https://data.vision.ee.ethz.ch/cvl/DIV2K/，放到data/DIV2K文件夹下然后解压，删除压缩包，运行202504171726_preprocess.py程序来预处理数据集。
+
+202504180935.py —— 用MLP做Div2k图像超分辨任务，最后的loss参与梯度更新，画出一个实例，增加PSNR，SSIM评价指标。
+
+202504181041.py —— 用MLP做Div2k图像超分辨任务，最后的loss参与梯度更新，画出一个实例，增加PSNR，SSIM评价指标。
